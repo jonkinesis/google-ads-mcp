@@ -78,12 +78,14 @@ def execute_gaql(
         if page_size:
             request.page_size = page_size
         response = service.search(request=request)
-        rows = rows_to_dicts(response.results)
+        page_rows = getattr(response, "results", response)
+        rows = rows_to_dicts(page_rows)
+        next_page_token = getattr(response, "next_page_token", None) or None
         return success_payload(
             rows,
             customer_id=cid,
             row_count=len(rows),
-            next_page_token=response.next_page_token or None,
+            next_page_token=next_page_token,
         )
     except GoogleAdsException as exc:
         return format_exception(exc, customer_id=cid, request_id=exc.request_id)

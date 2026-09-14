@@ -19,26 +19,26 @@ def register(mcp) -> None:
     @mcp.tool(name="list_campaigns")
     def list_campaigns(customer_id: str | None = None, page_size: int | None = None, stream: bool = False) -> dict[str, Any]:
         """List campaigns."""
-        q = """SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type, campaign.start_date, campaign.end_date FROM campaign ORDER BY campaign.id"""
+        q = """SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type, campaign.start_date_time, campaign.end_date_time, customer.time_zone FROM campaign ORDER BY campaign.id"""
         return gaql_tool(q, customer_id=customer_id, page_size=page_size, stream=stream)
 
     @mcp.tool(name="get_campaign")
     def get_campaign(campaign_id: int, customer_id: str | None = None, page_size: int | None = None, stream: bool = False) -> dict[str, Any]:
         """Get one campaign by ID."""
-        q = """SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type, campaign.start_date, campaign.end_date, campaign.campaign_budget FROM campaign WHERE campaign.id = {campaign_id}"""
+        q = """SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type, campaign.start_date_time, campaign.end_date_time, campaign.campaign_budget, customer.time_zone FROM campaign WHERE campaign.id = {campaign_id}"""
         q = q.format(campaign_id=campaign_id)
         return gaql_tool(q, customer_id=customer_id, page_size=page_size, stream=stream)
 
     @mcp.tool(name="get_campaign_performance")
     def get_campaign_performance(customer_id: str | None = None, date_range: str | None = "LAST_30_DAYS", page_size: int | None = None, stream: bool = False) -> dict[str, Any]:
         """Campaign performance metrics."""
-        q = """SELECT campaign.id, campaign.name, campaign.status, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions, metrics.conversions_value FROM campaign"""
+        q = """SELECT campaign.id, campaign.name, campaign.status, campaign.start_date_time, campaign.end_date_time, customer.time_zone, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions, metrics.conversions_value FROM campaign"""
         return gaql_tool(q, customer_id=customer_id, date_range=date_range, page_size=page_size, stream=stream)
 
     @mcp.tool(name="get_campaign_statuses")
     def get_campaign_statuses(customer_id: str | None = None, date_range: str | None = "LAST_30_DAYS", page_size: int | None = None, stream: bool = False) -> dict[str, Any]:
         """Campaign status counts."""
-        q = """SELECT campaign.status, metrics.impressions FROM campaign"""
+        q = """SELECT campaign.id, campaign.name, campaign.status, campaign.start_date_time, campaign.end_date_time, metrics.impressions FROM campaign"""
         return gaql_tool(q, customer_id=customer_id, date_range=date_range, page_size=page_size, stream=stream)
 
     @mcp.tool(name="list_campaign_budgets")
@@ -160,8 +160,8 @@ def register(mcp) -> None:
 
     @mcp.tool(name="get_demographic_performance")
     def get_demographic_performance(customer_id: str | None = None, date_range: str | None = "LAST_30_DAYS", page_size: int | None = None, stream: bool = False) -> dict[str, Any]:
-        """Demographic performance."""
-        q = """SELECT ad_group_criterion.gender.type, ad_group_criterion.age_range.type, metrics.impressions, metrics.clicks, metrics.cost_micros FROM gender_view"""
+        """Demographic performance by gender (age_range_view is a separate query; combined age+gender is not supported)."""
+        q = """SELECT ad_group_criterion.gender.type, metrics.impressions, metrics.clicks, metrics.cost_micros FROM gender_view"""
         return gaql_tool(q, customer_id=customer_id, date_range=date_range, page_size=page_size, stream=stream)
 
     @mcp.tool(name="list_assets")
@@ -250,8 +250,8 @@ def register(mcp) -> None:
 
     @mcp.tool(name="get_conversion_goals")
     def get_conversion_goals(customer_id: str | None = None, page_size: int | None = None, stream: bool = False) -> dict[str, Any]:
-        """Conversion goals."""
-        q = """SELECT conversion_goal.id, conversion_goal.name, conversion_goal.category FROM conversion_goal"""
+        """Custom conversion goals (v25 custom_conversion_goal resource)."""
+        q = """SELECT custom_conversion_goal.id, custom_conversion_goal.name, custom_conversion_goal.status FROM custom_conversion_goal"""
         return gaql_tool(q, customer_id=customer_id, page_size=page_size, stream=stream)
 
     @mcp.tool(name="get_campaign_conversion_goals")
@@ -347,8 +347,11 @@ def register(mcp) -> None:
     @mcp.tool(name="get_invoices_if_supported")
     def get_invoices_if_supported(customer_id: str | None = None, page_size: int | None = None, stream: bool = False) -> dict[str, Any]:
         """Invoices (may require elevated access)."""
-        q = """SELECT invoice.id, invoice.type, invoice.issue_date, invoice.due_date, invoice.currency_code, invoice.subtotal_amount_micros FROM invoice"""
-        return gaql_tool(q, customer_id=customer_id, page_size=page_size, stream=stream)
+        return {
+            "success": False,
+            "message": "invoice is not a GoogleAdsService GAQL resource in API v25. Use InvoiceService.list_invoices via google_ads_service_call (requires billing setup and issue month).",
+            "suggested_action": "Call InvoiceService.list_invoices with customer_id, billing_setup, and issue_year_month.",
+        }
 
     @mcp.tool(name="get_experiments")
     def get_experiments(customer_id: str | None = None, page_size: int | None = None, stream: bool = False) -> dict[str, Any]:
@@ -358,8 +361,8 @@ def register(mcp) -> None:
 
     @mcp.tool(name="get_campaign_experiments")
     def get_campaign_experiments(customer_id: str | None = None, page_size: int | None = None, stream: bool = False) -> dict[str, Any]:
-        """Campaign experiments."""
-        q = """SELECT campaign_experiment.resource_name, campaign_experiment.experiment, campaign_experiment.experiment_campaign FROM campaign_experiment"""
+        """Campaign experiment arms (v25 experiment_arm; campaign_experiment was removed)."""
+        q = """SELECT experiment_arm.resource_name, experiment_arm.experiment, experiment_arm.campaigns, experiment_arm.control FROM experiment_arm"""
         return gaql_tool(q, customer_id=customer_id, page_size=page_size, stream=stream)
 
     @mcp.tool(name="get_audiences")

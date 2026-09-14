@@ -2,9 +2,8 @@
 from __future__ import annotations
 from typing import Any
 from app import mutations as mutation_api
-from app.audit import audit_log
+from app.campaign_dates import normalize_campaign_date_time
 from app.google_ads_client import get_client_holder
-from app.safety import remove_operation_summary
 
 def _cid(customer_id: str | None) -> str:
     return get_client_holder().resolve_customer_id(customer_id)
@@ -43,8 +42,10 @@ def register(mcp) -> None:
     @mcp.tool()
     def set_campaign_dates(campaign_id: int, start_date: str | None = None, end_date: str | None = None, customer_id: str | None = None, dry_run: bool = False) -> dict[str, Any]:
         updates = {}
-        if start_date: updates["start_date"] = start_date
-        if end_date: updates["end_date"] = end_date
+        if start_date:
+            updates["start_date_time"] = normalize_campaign_date_time(start_date, end=False)
+        if end_date:
+            updates["end_date_time"] = normalize_campaign_date_time(end_date, end=True)
         return update_campaign(campaign_id, updates, customer_id=customer_id, dry_run=dry_run)
 
     @mcp.tool()

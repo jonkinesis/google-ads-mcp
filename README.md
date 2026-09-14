@@ -150,7 +150,11 @@ Use `google_ads_list_services` + `google_ads_service_call` for any additional Go
 
 - **Keyword Plan Idea / historical metrics**: use `google_ads_service_call` with `KeywordPlanIdeaService` (not full GAQL).
 - **Customer Match member removal**: requires `OfflineUserDataJobService` job workflow; helper returns guidance.
-- **Invoices / some billing reads**: may require elevated access; API errors are surfaced verbatim.
+- **Invoices**: `invoice` is **not** a `GoogleAdsService` GAQL resource in API v25. `get_invoices_if_supported` returns guidance; use `InvoiceService.list_invoices` via `google_ads_service_call` (billing setup + issue month; may require elevated access).
+- **`conversion_goal` resource**: removed. Convenience reads use `custom_conversion_goal` (plus `campaign_conversion_goal` / `customer_conversion_goal`). The newer `goal` resource is not wrapped as a named convenience tool.
+- **`campaign_experiment` resource**: removed. Use `experiment` and `experiment_arm`.
+- **Combined age + gender demographics**: not supported in one GAQL query. `get_demographic_performance` uses `gender_view` only; query `age_range_view` separately via `google_ads_query`.
+- **Asset / listing metrics**: some `FROM asset` metric combinations can be rejected by the live API even when fields exist on the proto. Errors are returned verbatim — do not assume every convenience report is selectable together.
 - **Per-service named wrappers**: all installed services are reachable via `google_ads_service_call`; not every service has a dedicated convenience alias.
 - **Explorer access limitations**: write or specialized endpoints may fail until Google Cloud API access is upgraded — errors include suggested actions.
 - **Resource mutate dispatcher**: maps to the primary `mutate_*` method per service; exotic operation shapes may require `google_ads_service_call` with an explicit request payload.
