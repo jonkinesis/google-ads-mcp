@@ -12,6 +12,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from app.config import get_settings
+from app.observations import register_observations
 from tools import register_all_tools
 from tools.tool_modes import apply_tool_exposure
 
@@ -55,6 +56,7 @@ def create_mcp() -> FastMCP:
         }
         return JSONResponse(payload)
 
+    register_observations(mcp)
     register_all_tools(mcp)
     apply_tool_exposure(mcp, settings.mcp_tool_mode)
     return mcp
