@@ -26,7 +26,7 @@ DETAIL_QUERIES = {
  'campaignPerformance7': f'SELECT campaign.id, {METRICS} FROM campaign WHERE segments.date DURING LAST_7_DAYS LIMIT 2001',
  'daily': f'SELECT campaign.id, segments.date, {METRICS} FROM campaign WHERE segments.date DURING LAST_30_DAYS LIMIT 2001',
  'devices': f'SELECT segments.device, {METRICS} FROM customer WHERE segments.date DURING LAST_30_DAYS LIMIT 2001',
- 'keywords': f'SELECT campaign.id, ad_group.id, ad_group_criterion.criterion_id, ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type, {METRICS} FROM keyword_view WHERE segments.date DURING LAST_30_DAYS LIMIT 2001',
+ 'keywords': f'SELECT campaign.id, ad_group.id, ad_group_criterion.criterion_id, ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type, {METRICS} FROM keyword_view WHERE segments.date DURING LAST_30_DAYS AND metrics.impressions > 0 LIMIT 2001',
  'searchTerms': f'SELECT campaign.id, ad_group.id, search_term_view.search_term, {METRICS} FROM search_term_view WHERE segments.date DURING LAST_30_DAYS LIMIT 2001',
 }
 for days in (7,30):
