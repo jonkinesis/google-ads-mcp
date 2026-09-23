@@ -32,7 +32,7 @@ def register(mcp) -> None:
     @mcp.tool(name="get_campaign_performance")
     def get_campaign_performance(customer_id: str | None = None, date_range: str | None = "LAST_30_DAYS", page_size: int | None = None, stream: bool = False) -> dict[str, Any]:
         """Campaign performance metrics."""
-        q = """SELECT campaign.id, campaign.name, campaign.status, campaign.start_date_time, campaign.end_date_time, customer.time_zone, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions, metrics.conversions_value FROM campaign"""
+        q = """SELECT campaign.id, campaign.name, campaign.status, campaign.start_date_time, campaign.end_date_time, customer.time_zone, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.ctr, metrics.average_cpc, metrics.conversions, metrics.conversions_value, metrics.cost_per_conversion FROM campaign"""
         return gaql_tool(q, customer_id=customer_id, date_range=date_range, page_size=page_size, stream=stream)
 
     @mcp.tool(name="get_campaign_statuses")

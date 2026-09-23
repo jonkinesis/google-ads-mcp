@@ -21,6 +21,14 @@ QUERIES = {
  'campaignPerformance': 'SELECT campaign.id, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date DURING LAST_30_DAYS LIMIT 501',
  'diagnostics': "SELECT campaign.id, campaign.status, ad_group_ad.ad.id, ad_group_ad.policy_summary.approval_status FROM ad_group_ad WHERE ad_group_ad.status != 'REMOVED' AND ad_group_ad.policy_summary.approval_status = 'DISAPPROVED' LIMIT 501",
 }
+QUERIES['campaignPerformance'] = f'SELECT campaign.id, {METRICS} FROM campaign WHERE segments.date DURING LAST_30_DAYS LIMIT 501'
+DETAIL_QUERIES = {
+ 'campaignPerformance7': f'SELECT campaign.id, {METRICS} FROM campaign WHERE segments.date DURING LAST_7_DAYS LIMIT 2001',
+ 'daily': f'SELECT campaign.id, segments.date, {METRICS} FROM campaign WHERE segments.date DURING LAST_30_DAYS LIMIT 2001',
+ 'devices': f'SELECT segments.device, {METRICS} FROM customer WHERE segments.date DURING LAST_30_DAYS LIMIT 2001',
+ 'keywords': f'SELECT campaign.id, ad_group.id, ad_group_criterion.criterion_id, ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type, {METRICS} FROM keyword_view WHERE segments.date DURING LAST_30_DAYS LIMIT 2001',
+ 'searchTerms': f'SELECT campaign.id, ad_group.id, search_term_view.search_term, {METRICS} FROM search_term_view WHERE segments.date DURING LAST_30_DAYS LIMIT 2001',
+}
 for days in (7,30):
  QUERIES[f'last{days}'] = f'SELECT {METRICS} FROM customer WHERE segments.date DURING LAST_{days}_DAYS LIMIT 2'
 
@@ -41,7 +49,16 @@ def collect_observations(query=execute_gaql):
   rows=results[f'last{days}']
   if len(rows)>1: raise ValueError('Invalid aggregate')
   periods[str(days)]={'since':str(today-timedelta(days=days)), 'until':str(today-timedelta(days=1)), 'state':'available' if rows else 'unavailable', 'metrics':rows[0].get('metrics',{}) if rows else {}}
- return {'version':1,'provider':'Google Ads','scope':'marketing_channel','channel':'nightlife','destination':'https://nightlife.mythexperience.com/','observedAt':datetime.now(timezone.utc).isoformat(),'account':account,'periods':periods,'campaigns':results['campaigns'],'campaignPerformance':results['campaignPerformance'],'conversionActions':results['conversionActions'],'conversionPerformance':results['conversionPerformance'],'diagnostics':results['diagnostics'],'conversionValueTrust':'unverified_mixed_actions','provenance':{'interface':'fixed-gaql-read-only','periodSemantics':'account timezone; completed days; excludes today'}}
+ details={}
+ for name, gaql in DETAIL_QUERIES.items():
+  try:
+   value=query(gaql,customer_id=ACCOUNT,stream=True)
+   rows=value.get('data')
+   if value.get('success') is not True or value.get('customer_id')!=ACCOUNT or not isinstance(rows,list) or len(rows)>=2001 or value.get('next_page_token'): raise ValueError('Incomplete detail')
+   details[name]={'state':'available','rows':rows,'period':periods['7' if name=='campaignPerformance7' else '30']}
+  except Exception:
+   details[name]={'state':'unavailable','rows':[],'period':periods['7' if name=='campaignPerformance7' else '30']}
+ return {'details':details,'version':1,'provider':'Google Ads','scope':'marketing_channel','channel':'nightlife','destination':'https://nightlife.mythexperience.com/','observedAt':datetime.now(timezone.utc).isoformat(),'account':account,'periods':periods,'campaigns':results['campaigns'],'campaignPerformance':results['campaignPerformance'],'conversionActions':results['conversionActions'],'conversionPerformance':results['conversionPerformance'],'diagnostics':results['diagnostics'],'conversionValueTrust':'unverified_mixed_actions','provenance':{'interface':'fixed-gaql-read-only','periodSemantics':'account timezone; completed days; excludes today'}}
 
 def register_observations(mcp):
  cache=None

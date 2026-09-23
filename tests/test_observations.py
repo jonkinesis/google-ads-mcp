@@ -31,7 +31,8 @@ def test_queries_account_periods_and_no_inferred_zero(monkeypatch):
   if q==QUERIES['last30']:rows=[{'metrics':{'cost_micros':'0','conversions':0}}]
   return {'success':True,'customer_id':ACCOUNT,'data':rows}
  result=collect_observations(query)
- assert len(calls)==8
+ assert len(calls)==13
+ assert result["details"]["keywords"]["state"]=="available"
  assert result['scope']=='marketing_channel'
  assert result['periods']['30']['metrics']['cost_micros']=='0'
  assert 'clicks' not in result['periods']['30']['metrics']
@@ -43,3 +44,17 @@ def test_failure_and_account_lock(monkeypatch):
  with pytest.raises(ValueError):collect_observations(lambda *a,**k: {})
  monkeypatch.setenv('GOOGLE_ADS_CUSTOMER_ID',ACCOUNT);get_settings.cache_clear()
  with pytest.raises(ValueError):collect_observations(lambda *a,**k: {'success':False})
+
+def test_optional_detail_failure_preserves_aggregate_contract(monkeypatch):
+ from app.observations import DETAIL_QUERIES
+ monkeypatch.setenv('GOOGLE_ADS_CUSTOMER_ID',ACCOUNT);get_settings.cache_clear()
+ def query(q,**kwargs):
+  if q==DETAIL_QUERIES['keywords']: return {'success':False}
+  rows=[{'customer':{'id':ACCOUNT,'time_zone':'America/New_York'}}] if q==QUERIES['account'] else []
+  return {'success':True,'customer_id':ACCOUNT,'data':rows}
+ result=collect_observations(query)
+ assert result['details']['keywords']['state']=='unavailable'
+ assert result['details']['keywords']['rows']==[]
+ assert result['details']['devices']['state']=='available'
+ assert result['details']['campaignPerformance7']['period']==result['periods']['7']
+ assert result['details']['daily']['period']==result['periods']['30']
