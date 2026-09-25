@@ -29,6 +29,8 @@ DETAIL_QUERIES = {
  'keywords': f'SELECT campaign.id, ad_group.id, ad_group_criterion.criterion_id, ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type, {METRICS} FROM keyword_view WHERE segments.date DURING LAST_30_DAYS AND metrics.impressions > 0 LIMIT 2001',
  'searchTerms': f'SELECT campaign.id, ad_group.id, search_term_view.search_term, {METRICS} FROM search_term_view WHERE segments.date DURING LAST_30_DAYS LIMIT 2001',
 }
+for name in ('devices', 'keywords', 'searchTerms'):
+ DETAIL_QUERIES[name+'7'] = DETAIL_QUERIES[name].replace('LAST_30_DAYS', 'LAST_7_DAYS')
 for days in (7,30):
  QUERIES[f'last{days}'] = f'SELECT {METRICS} FROM customer WHERE segments.date DURING LAST_{days}_DAYS LIMIT 2'
 
@@ -55,9 +57,9 @@ def collect_observations(query=execute_gaql):
    value=query(gaql,customer_id=ACCOUNT,stream=True)
    rows=value.get('data')
    if value.get('success') is not True or value.get('customer_id')!=ACCOUNT or not isinstance(rows,list) or len(rows)>=2001 or value.get('next_page_token'): raise ValueError('Incomplete detail')
-   details[name]={'state':'available','rows':rows,'period':periods['7' if name=='campaignPerformance7' else '30']}
+   details[name]={'state':'available','rows':rows,'period':periods['7' if name.endswith('7') else '30']}
   except Exception:
-   details[name]={'state':'unavailable','rows':[],'period':periods['7' if name=='campaignPerformance7' else '30']}
+   details[name]={'state':'unavailable','rows':[],'period':periods['7' if name.endswith('7') else '30']}
  return {'details':details,'version':1,'provider':'Google Ads','scope':'marketing_channel','channel':'nightlife','destination':'https://nightlife.mythexperience.com/','observedAt':datetime.now(timezone.utc).isoformat(),'account':account,'periods':periods,'campaigns':results['campaigns'],'campaignPerformance':results['campaignPerformance'],'conversionActions':results['conversionActions'],'conversionPerformance':results['conversionPerformance'],'diagnostics':results['diagnostics'],'conversionValueTrust':'unverified_mixed_actions','provenance':{'interface':'fixed-gaql-read-only','periodSemantics':'account timezone; completed days; excludes today'}}
 
 def register_observations(mcp):
